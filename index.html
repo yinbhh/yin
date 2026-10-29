@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="球鞋库存">
+<meta name="theme-color" content="#2563eb">
+<title>球鞋库存台账</title>
+<link rel="manifest" href="./manifest.json">
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js');
+  }
+</script>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif;background:#f2f3f5;color:#1a1a1a;font-size:15px;padding-bottom:40px}
+.top{background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;padding:18px 16px 20px;border-radius:0 0 20px 20px}
+.top h1{font-size:17px;margin:0 0 14px;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+.top h1 span{font-size:12px;font-weight:400;opacity:.8}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:rgba(255,255,255,.15);border-radius:12px;padding:10px 6px;text-align:center}
+.stat .label{display:block;font-size:11px;opacity:.85;margin-bottom:4px}
+.stat .val{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
+.card{background:#fff;margin:12px;border-radius:14px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.field{display:block;font-size:12px;color:#8a8f99;margin-bottom:10px}
+.field>span{display:block;margin-bottom:5px}
+input,select{width:100%;border:1px solid #e3e5e8;border-radius:10px;padding:10px;font-size:16px;background:#fafbfc;outline:none;font-family:inherit;color:#1a1a1a}
+input:focus,select:focus{border-color:#2563eb;background:#fff}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btns{display:flex;gap:8px;margin-top:4px}
+button{font-family:inherit;font-size:15px;border:none;border-radius:10px;padding:11px;cursor:pointer;font-weight:600}
+.primary{background:#2563eb;color:#fff;flex:1}
+.ghost{background:#eef0f3;color:#555;flex:1}
+.toolbar{display:flex;gap:8px;margin:0 12px 10px}
+.toolbar input{flex:1}
+.toolbar select{width:96px;flex:none}
+.item{background:#fff;border-radius:14px;padding:12px 14px;margin:0 12px 10px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.item-head{display:flex;align-items:center;gap:8px}
+.item-name{font-weight:600;font-size:15px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tag{font-size:11px;padding:3px 8px;border-radius:6px;flex:none;font-weight:500}
+.tag.in{background:#e0f2e9;color:#0f7b4f}
+.tag.sold{background:#eef0f3;color:#666}
+.item-info{display:flex;gap:12px;margin-top:7px;font-size:13px;color:#6b7280;font-variant-numeric:tabular-nums;flex-wrap:wrap}
+.item-foot{display:flex;align-items:center;gap:8px;margin-top:9px;padding-top:9px;border-top:1px dashed #f0f1f3;font-size:13px}
+.pf{font-weight:700;font-variant-numeric:tabular-nums;flex:none}
+.pf.pos{color:#16a34a}
+.pf.neg{color:#dc2626}
+.note{color:#9aa0a6;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.ops{margin-left:auto;display:flex;gap:6px;flex:none}
+.ops button{background:#f2f3f5;color:#555;font-size:12px;padding:6px 10px;border-radius:8px;font-weight:500}
+.empty{text-align:center;color:#9aa0a6;font-size:13px;padding:40px 20px}
+.footer{text-align:center;padding:18px 0;font-size:12px;color:#9aa0a6}
+.footer button{background:none;color:#2563eb;font-size:12px;padding:6px;font-weight:400}
+.footer .danger{color:#dc2626}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <h1>球鞋库存台账 <span id="count">0 条</span></h1>
+  <div class="stats">
+    <div class="stat"><span class="label">在库件数</span><span class="val" id="statQty">0</span></div>
+    <div class="stat"><span class="label">库存成本</span><span class="val" id="statCost">¥0</span></div>
+    <div class="stat"><span class="label">已实现收益</span><span class="val" id="statProfit">¥0</span></div>
+  </div>
+</div>
+
+<form class="card" id="form">
+  <label class="field"><span>商品名</span><input id="name" placeholder="例：AJ1 芝加哥 42码" required></label>
+  <div class="grid3">
+    <label class="field"><span>成本(元)</span><input id="cost" type="number" inputmode="decimal" placeholder="0" required></label>
+    <label class="field"><span>出售价格(元)</span><input id="price" type="number" inputmode="decimal" placeholder="0"></label>
+    <label class="field"><span>数量</span><input id="qty" type="number" inputmode="numeric" value="1" min="1"></label>
+  </div>
+  <div class="grid2">
+    <label class="field"><span>状态</span><select id="status"><option value="in">在库</option><option value="sold">已售</option></select></label>
+    <label class="field"><span>备注</span><input id="note" placeholder="选填，如平台 / 运费"></label>
+  </div>
+  <div class="btns">
+    <button type="submit" class="primary" id="submitBtn">添加记录</button>
+    <button type="button" class="ghost" id="cancelBtn" hidden>取消</button>
+  </div>
+</form>
+
+<div class="toolbar">
+  <input id="search" placeholder="搜索商品名">
+  <select id="filter">
+    <option value="all">全部</option>
+    <option value="in">在库</option>
+    <option value="sold">已售</option>
+  </select>
+</div>
+
+<div id="list"></div>
+
+<div class="footer">
+  <button id="exportBtn">导出备份</button> · <button id="clearBtn" class="danger">清空全部</button>
+</div>
+
+<script>
+const KEY = 'sneaker_stock_v2'; // 升级了版本号，避免旧数据冲突
+const $ = id => document.getElementById(id);
+let data = load();
+let editingId = null;
+
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY)) || []; }catch(e){ return []; } }
+function save(){ localStorage.setItem(KEY, JSON.stringify(data)); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function money(n){
+  const v = Math.round((Number(n)||0)*100)/100;
+  const s = Math.abs(v).toLocaleString('zh-CN',{maximumFractionDigits:2});
+  return (v<0?'-¥':'¥') + s;
+}
+
+// 统一计算利润逻辑： (售价 - 成本) * 数量
+function profitOf(it){
+  const p = Number(it.price)||0;
+  const c = Number(it.cost)||0;
+  const q = Number(it.qty)||1;
+  return (p - c) * q;
+}
+
+function render(){
+  // ---- 顶部统计 ----
+  let qty=0, cost=0, profit=0;
+  data.forEach(it=>{
+    const q = Number(it.qty)||1;
+    if(it.status === 'in'){ 
+      qty += q; 
+      cost += (Number(it.cost)||0)*q; 
+    } else { 
+      profit += profitOf(it); 
+    }
+  });
+  $('statQty').textContent = qty;
+  $('statCost').textContent = money(cost);
+  $('statProfit').textContent = money(profit);
+  $('count').textContent = data.length + ' 条';
+
+  // ---- 列表 ----
+  const kw = $('search').value.trim().toLowerCase();
+  const f  = $('filter').value;
+  const arr = data.filter(it=>{
+    if(f !== 'all' && it.status !== f) return false;
+    if(kw && !(it.name||'').toLowerCase().includes(kw)) return false;
+    return true;
+  });
+
+  if(!arr.length){
+    $('list').innerHTML = '<div class="empty">还没有记录，先在上面添加一条吧 👟</div>';
+    return;
+  }
+
+  $('list').innerHTML = arr.map(it=>{
+    const q = Number(it.qty)||1;
+    const sold = it.status === 'sold';
+    const pf = profitOf(it);
+    return `<div class="item">
+      <div class="item-head">
+        <div class="item-name">${esc(it.name)}</div>
+        <span class="tag ${sold?'sold':'in'}">${sold?'已售':'在库'}</span>
+      </div>
+      <div class="item-info">
+        <span>成本 ${money(it.cost)}</span>
+        <span>售价 ${(it.price===''||it.price==null)?'—':money(it.price)}</span>
+        <span>×${q}</span>
+      </div>
+      <div class="item-foot">
+        <span class="pf ${pf>=0?'pos':'neg'}">${sold?'实际收益':'预计收益'} ${pf>=0?'+':''}${money(pf)}</span>
+        ${it.note ? `<span class="note">${esc(it.note)}</span>` : '<span class="note"></span>'}
+        <span class="ops">
+          <button data-act="edit" data-id="${it.id}">编辑</button>
+          <button data-act="del" data-id="${it.id}">删除</button>
+        </span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function resetForm(){
+  $('form').reset();
+  $('qty').value = 1;
+  editingId = null;
+  $('submitBtn').textContent = '添加记录';
+  $('cancelBtn').hidden = true;
+}
+
+// ---- 提交 ----
+$('form').addEventListener('submit', e=>{
+  e.preventDefault();
+  const name = $('name').value.trim();
+  if(!name){ $('name').focus(); return; }
+
+  const item = {
+    id: editingId || (Date.now().toString(36) + Math.random().toString(36).slice(2,6)),
+    name,
+    cost: $('cost').value,
+    price: $('price').value,
+    qty: $('qty').value || 1,
+    status: $('status').value,
+    note: $('note').value.trim(),
+    date: new Date().toISOString()
+  };
+
+  if(editingId){
+    const i = data.findIndex(x => x.id === editingId);
+    if(i > -1) data[i] = { ...data[i], ...item };
+  } else {
+    data.unshift(item);
+  }
+
+  save(); resetForm(); render();
+});
+
+$('cancelBtn').addEventListener('click', resetForm);
+
+// ---- 列表操作 ----
+$('list').addEventListener('click', e=>{
+  const btn = e.target.closest('button[data-act]');
+  if(!btn) return;
+  const id = btn.dataset.id;
+  const it = data.find(x => x.id === id);
+  if(!it) return;
+
+  if(btn.dataset.act === 'del'){
+    if(confirm('确定删除「' + it.name + '」？')){
+      data = data.filter(x => x.id !== id);
+      save(); render();
+    }
+    return;
+  }
+
+  // 编辑
+  editingId = id;
+  $('name').value   = it.name || '';
+  $('cost').value   = it.cost ?? '';
+  $('price').value  = it.price ?? '';
+  $('qty').value    = it.qty || 1;
+  $('status').value = it.status || 'in';
+  $('note').value   = it.note || '';
+  $('submitBtn').textContent = '保存修改';
+  $('cancelBtn').hidden = false;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+// ---- 搜索 / 筛选 ----
+$('search').addEventListener('input', render);
+$('filter').addEventListener('change', render);
+
+// ---- 导出 / 清空 ----
+$('exportBtn').addEventListener('click', ()=>{
+  if(!data.length) return alert('暂无数据');
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '球鞋库存_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+});
+
+$('clearBtn').addEventListener('click', ()=>{
+  if(!data.length) return;
+  if(confirm('确定清空全部记录？建议先导出备份。')){
+    data = []; save(); resetForm(); render();
+  }
+});
+
+// ---- 启动 ----
+render();
+</script>
+</body>
+</html>
